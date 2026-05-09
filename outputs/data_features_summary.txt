@@ -1,0 +1,12 @@
+Data Summary:
+ Feature Name    Type  Missing?  Unique Values
+    data_year   int64       0.0              5
+disease_group     str       0.0             17
+          sex     str       0.0              2
+    age_group     str       0.0             21
+    total_yld   int64       0.0           2464
+   total_daly   int64       0.0           2873
+    total_yll   int64       0.0           1893
+ burden_ratio float64       0.0           2873
+      age_num   int64       0.0             21
+      sex_bin   int64       0.0              2

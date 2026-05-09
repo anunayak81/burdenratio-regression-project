@@ -1,0 +1,10 @@
+Duplicate removal on 2026-05-09 18:59:43.057613
+Original dataset: 70794 rows
+Duplicates found: 0
+Shape before removing duplicates: (70794, 12)
+Shape after removing duplicates: (70794, 12)
+Final dataset after duplicate removal: 70794 rows
+Check isNan: 0
+Data cleaning and filtering unwanted rows on 2026-05-09 18:59:43.169050
+Shape before cleaning and filtering: (70794, 12)
+Shape after cleaning and filtering: (32619, 12)

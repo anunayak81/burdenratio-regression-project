@@ -154,19 +154,18 @@ The project follows a full supervised machine learning pipeline with a sustainab
 
 1. **Data loading & cleaning**: Filter to individual-level sex (exclude 'Persons'), named age groups (exclude 'Total'), rows where DALY > 0.
 2. **Feature engineering**: Construct `burden_ratio` (target), `age_num` (ordinal), `sex_bin` (binary), `year_norm` (continuous). No burden-derived features.
-3. **EDA**: Explore target distribution (bimodality), burden ratio by disease group and age, temporal trends by sex, top diseases by total DALY, feature correlation matrix.
-4. **Preprocessing**: One-hot encoding for `disease_group`, standard scaling for numeric features. 80/20 train-test split.
-5. **Modelling — Tier 1 (Statistical)**: Linear Regression, Ridge (L2), Lasso (L1), Polynomial Regression (degree 2).
-6. **Modelling — Tier 2 (Interpretable ML)**: Decision Tree, Random Forest, Support Vector Regressor.
-7. **Modelling — Tier 3 (Boosting)**: Gradient Boosting, XGBoost, LightGBM.
-8. **Evaluation**: R², RMSE, MAE on held-out test set; 5-fold cross-validation for Tier 1 and 2 models; residual plots; feature importance; SHAP values.
-9. **Residual Drift Analysis (Sustainability Layer):**Applied across all 17 disease groups — findings are data-driven, not pre-selected:
+3. **EDA**: Explore target distribution (bimodality), burden ratio by disease group and age, temporal trends by sex, top diseases by total DALY, leakage diagnosis, feature correlation matrix.
+4. **Preprocessing**: One-hot encoding for `disease_group`, standard scaling for numeric features. Temporal hold-out split: 2003–2018 training, 2024 test.
+5. **Modelling — Tier 1 (Linear)**: Linear Regression (OLS baseline), Ridge (L2), Lasso (L1). Ridge and Lasso both returned negative R² — over-penalisation destroyed the disease group signal; included as documented failures confirming OLS as the appropriate linear baseline.
+6. **Modelling — Tier 2 (Tree-Based)**: Random Forest and XGBoost, evaluated with TimeSeriesSplit cross-validation (3 folds). XGBoost tuned through a documented hyperparameter journey; Random Forest included as a reference candidate at matched structural parameters.
+7. **Evaluation**: R², RMSE, MAE on 2024 holdout; TimeSeriesSplit CV (3 folds) for all models; residual plots; feature importance; SHAP values (beeswarm, bar, waterfall, force, dependence).
+8. **Residual Drift Analysis (Sustainability Layer):** Applied across all 17 disease groups — findings are data-driven, not pre-selected:
    - *Temporal drift:* mean residual by disease group × year; one-sample t-test against zero per group per year
    - *Disease-specific drift:* linear regression of residual on year per disease group; slope coefficient and significance reported
    - *Demographic parity:* residual magnitude and direction by sex and age band; identifies systematic over- or underestimation
    - *Spotlight:* disease groups with the largest statistically significant positive slope are reported as the primary sustainability signal
-10. **Ethical Reflection:** Demographic error parity check; ecological fallacy framing; regulatory compliance notes (Privacy Act 1988, Disability Discrimination Act 1992, APRA Prudential Standards).
-11. **Communication:** Output plots covering EDA, model comparison, residuals, SHAP, drift analysis, and insurance product alignment matrix.
+9. **Ethical Reflection:** Demographic error parity check; ecological fallacy framing; regulatory compliance notes (Privacy Act 1988, Disability Discrimination Act 1992, APRA Prudential Standards).
+10. **Communication:** Output plots covering EDA, model comparison, residuals, SHAP, drift analysis, and insurance product alignment matrix.
 
 ---
 
@@ -176,24 +175,55 @@ The project follows a full supervised machine learning pipeline with a sustainab
 BurdenRatio-ml-project/
 │
 ├── data/
-│   └── AIHW-BOD-40-ABDS-2024-national-disease-burden-data-tables.xlsx
+│   ├── raw/
+│   │   └── AIHW-BOD-40-ABDS-2024-national-disease-burden-data-tables.xlsx
+│   └── processed/
+│       ├── X_train_processed.csv
+│       ├── X_test_processed.csv
+│       ├── Y_train.csv
+│       └── Y_test.csv
 │
 ├── notebooks/
-│   └── abds_regression_notebook.py       # Full pipeline: EDA → modelling → sustainability
+│   └── regression_capstone.ipynb         # Full pipeline: EDA → modelling → sustainability
 │
 ├── outputs/
-│   ├── 01_eda.png
-│   ├── 02_decision_tree.png
-│   ├── 03_model_comparison.png
-│   ├── 04_residuals.png
-│   ├── 05_feature_importance.png
-│   ├── 06_shap.png
-│   ├── 07_sustainability_residual_drift.png
-│   ├── 08_demographic_parity.png
-│   └── 09_product_alignment.png
+│   ├── figures/
+│   │   ├── eda_burden_ratio_distribution.png
+│   │   ├── eda_disease_group.png
+│   │   ├── eda_disease_group_counts.png
+│   │   ├── eda_age_group_burden_ratio.png
+│   │   ├── eda_age_band_burden_ratio.png
+│   │   ├── eda_sex_burden_ratio.png
+│   │   ├── eda_sex_analysis.png
+│   │   ├── eda_year_burden_ratio.png
+│   │   ├── eda_leakage_corr.png
+│   │   ├── eda_leakage_diagnosis.png
+│   │   ├── model_comparison_metrics.png
+│   │   ├── model_interpretation.png
+│   │   ├── xgb_diagnostics.png
+│   │   ├── predicted_vs_actual.png
+│   │   ├── residual_drift_parity.png
+│   │   ├── shap_beeswarm.png
+│   │   ├── shap_bar.png
+│   │   ├── shap_waterfall.png
+│   │   ├── shap_force.png
+│   │   ├── shap_dependence.png
+│   │   └── shap_mean.png
+│   └── data_features_summary.txt
+│
+├── src/
+│   ├── dataclean/
+│   │   └── quality.py
+│   └── eda/
+│       ├── eda_disease_group.py
+│       ├── eda_sex_analysis.py
+│       └── eda_leakage_diagnosis.py
+│
+├── config/
+│   └── environment.yml
 │
 ├── docs/
-│   ├── project_overview.docx             # Full project write-up with placeholders
+│   ├── project_overview.docx             # Full project write-up
 │   └── regression_problem_framing.docx   # Five-component problem framing document
 │
 └── README.md
@@ -203,11 +233,9 @@ BurdenRatio-ml-project/
 
 ## 12. Next Steps
 
-- Update notebook to remove leaky features (`log_crude_daly_rate`, `yll_fraction`) and retrain all models on the clean four-feature set.
-- Formalise residual drift tests: one-sample t-test per disease group per year; linear regression of residual on year.
-- Add companion datasets: AIHW Health System Spending on Disease 2023–24 (cost per case) and NHS 2022 Risk Factor Prevalence (obesity, inactivity, smoking by age-sex).
-- Complete placeholder sections in `project_overview.docx` with final model results and plots.
+- Complete `project_overview.docx` with final model results, output plots, and residual drift findings.
 - Prepare stakeholder summary for insurance and public health audiences.
+- Add companion datasets: AIHW Health System Spending on Disease 2023–24 (cost per case) and NHS 2022 Risk Factor Prevalence (obesity, inactivity, smoking by age-sex) to extend the sustainability signal analysis.
 
 ---
 
